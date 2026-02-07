@@ -51,14 +51,18 @@ def upsert_page(slug: str, title: str, html: str, status: str = "draft"):
         r.raise_for_status()
         return r.json(), "created"
 
-if __name__ == "__main__":
-    with open("drafts/district-7-apartments.json", encoding="utf-8") as f:
-        draft = json.load(f)
+from pathlib import Path
 
-    page, action = upsert_page(
-        slug=draft["slug"],
-        title=draft["title"],
-        html=draft["html"],
-        status="draft"
-    )
-    print(action, page.get("link"))
+if __name__ == "__main__":
+    for path in Path("drafts").glob("*.json"):
+        with open(path, encoding="utf-8") as f:
+            draft = json.load(f)
+
+        page, action = upsert_page(
+            slug=draft["slug"],
+            title=draft["title"],
+            html=draft["html"],
+            status="draft"
+        )
+        print(action, draft["slug"], page.get("link"))
+

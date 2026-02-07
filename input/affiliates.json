@@ -1,0 +1,10 @@
+{
+  "primary": {
+    "label": "Check current availability",
+    "url": "/go/booking"
+  },
+  "secondary": {
+    "label": "Browse monthly rentals",
+    "url": "/go/spotahome"
+  }
+}
