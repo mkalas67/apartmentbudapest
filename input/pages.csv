@@ -1,6 +1,17 @@
-slug,title,area,intent
-district-7-apartments,Apartments in District VII Budapest,District VII,monthly
-district-5-apartments,Apartments in District V Budapest,District V,central
-district-6-apartments,Apartments in District VI Budapest,District VI,nightlife
-district-8-apartments,Apartments in District VIII Budapest,District VIII,budget
-district-9-apartments,Apartments in District IX Budapest,District IX,family
+slug,title,area,intent,gen,primary_partner,secondary_partner,meta_description,primary_keyword
+district-7-apartments,Apartments in District VII Budapest,District VII,monthly,,booking,booking,"long-term stay, Erzsébetváros, ruin bars, monthly lease",District 7 apartments for rent
+district-5-apartments,Apartments in District V Budapest,District V,central,,booking,booking,"city center, Belváros, Danube view, Parliament, luxury",District 5 Budapest apartments
+apartments-in-budapest,Apartments Budapest,,pillar,stub,booking,booking,"rental market, move to Hungary, flats, relocation",apartments for rent Budapest
+district-6-apartments,Apartments in District VI Budapest,District VI,nightlife,,booking,booking,"Terézváros, Andrássy Avenue, Opera, party district, social",District 6 apartments Budapest
+district-8-apartments,Apartments in District VIII Budapest,District VIII,budget,,booking,booking,"affordable housing, Józsefváros, Corvin Plaza, student friendly",District 8 apartments for rent
+district-9-apartments,Apartments in District IX Budapest,District IX,family,,booking,booking,"Ferencváros, quiet streets, parks, residential, riverside",District 9 apartments Budapest
+apartments-in-budapest,Apartments Budapest,,pillar,stub,booking,booking,"rental market, move to Hungary, flats, relocation",apartments for rent Budapest
+where-to-live-in-budapest,Where to live in Budapest,,pillar,stub,booking,booking,"neighborhood guide, expat areas, safety, local vibe",best districts Budapest
+monthly-rentals-budapest,Monthly rentals in Budapest,,pillar,stub,booking,booking,"mid-term housing, serviced apartments, no long contract",Budapest monthly rentals
+budapest-district-guide,Budapest District Guide,,pillar,stub,booking,booking,"guide to neighborhoods, property prices, transport",Budapest district map
+student-apartments-budapest,Student Apartments Budapest,,pillar,stub,booking,booking,"near universities, shared flats, budget-friendly, Erasmus",student accommodation Budapest
+housing-for-expats-budapest,Housing For Expats Budapest,,pillar,stub,booking,booking,"English speaking agents, relocation services, luxury rentals",expat housing Budapest
+digital-nomad-apartments-budapest,Digital Nomad Apartments Budapest,,pillar,stub,booking,booking,"fast wifi, coworking, flexible terms, central location",Budapest digital nomad housing
+district-2-apartments,Apartments in District II Budapest,District II,monthly,,booking,booking,"English speaking agents, relocation services, luxury rentals, high-end flats, expat friendly",expat housing Budapest
+district-12-apartments,Apartments in District XII Budapest,District XII,central,,booking,booking,"fast wifi, coworking, flexible terms, central location, laptop friendly, community vibe",Budapest digital nomad housing
+district-1-apartments,Apartments in District I Budapest,District I,central,,booking,booking,"city center, Belváros, Danube view, Castle, luxury",District 1 Budapest apartments

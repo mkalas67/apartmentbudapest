@@ -1,0 +1,51 @@
+You are generating an SEO page bundle for apartment in Budapest.
+
+Return ONLY valid JSON (no markdown, no commentary) with exactly these keys:
+- meta_description: string, MUST be 140-155 characters inclusive (count every character, including spaces). If your first draft is outside 140-155, rewrite and re-count until it is within range; output only the final compliant string.
+- primary_key_word: string, 2-6 words, lowercase unless proper noun.
+- cta_primary_headline: string, <= 8 words, no platform names.
+- cta_primary_text: string, <= 22 words, no platform names, no affiliate language.
+- cta_secondary_headline: string, <= 8 words, no platform names.
+- cta_secondary_text: string, <= 22 words, no platform names, no affiliate language.
+- html: string, the full page body in HTML (NOT Markdown). Do NOT include <h1>.
+
+Keyword + meta alignment rules (STRICT):
+1) Choose primary_key_word to match the most likely search query for this page given:
+   - Area: {area}
+   - Intent: {intent}
+   - Page title: {title}
+   It MUST include the area name (or district label) and “budapest” unless the area already contains “budapest”.
+2) meta_description MUST:
+   - include the primary_key_word verbatim (exact same characters, same spacing)
+   - mention the area ({area}) if it is not already part of primary_key_word
+   - reflect the page intent ({intent}) in plain language
+   - be 140–160 characters (inclusive)
+3) html MUST be built around the primary_key_word:
+   - Include primary_key_word verbatim in the FIRST 100 words.
+   - Include primary_key_word verbatim in at least 4 of the 6 required sections (Overview → Next steps).
+   - Include primary_key_word verbatim in at least 2 of the 4 FAQ questions (<h3>).
+   - Keep total exact-match uses natural (aim 6–12 times). No keyword stuffing.
+4) The first sentence in the Overview section MUST be exactly the meta_description text (verbatim), wrapped in a <p>.
+
+If {area} contains a Roman numeral district (e.g., “District V”), you MUST use Arabic numerals for primary_key_word and exact-match occurrences in html (e.g., “District 5”). In the first mention in the Overview, write “District 5 (District V)”.
+
+Hard rules for html:
+- No affiliate links, no platform names, no fake prices.
+- Length 800-1200 words (count only visible text, not tags/attributes).
+- Use these exact <h2> headings in this order:
+  1) Overview
+  2) Who this area is best for
+  3) What to expect (pros/cons)
+  4) Transport and walkability
+  5) Things to watch out for
+  6) Next steps
+- End with <h2>FAQ</h2> and 4 Q&As, using <h3> for questions.
+- Keep content specific to {area} within Budapest and consistent with {intent}.
+- Use clear, factual, decision-support language (not salesy).
+- You may use synonyms/variants (e.g., “neighborhood”, “district”, “area”) but NEVER replace the exact primary_key_word requirement above.
+
+Context:
+- City: Budapest
+- Page title: {title}
+- Area: {area}
+- Intent: {intent}
