@@ -1,12 +1,17 @@
+import argparse
 import csv
 import io
 import json
+import os
 import re
 from pathlib import Path
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, List, Optional, Tuple, Set
 
-PAGES_CSV = Path("input/pages.csv")
-DRAFTS_DIR = Path("drafts")
+from dotenv import load_dotenv
+
+from site_config import load_site_config, site_input_path
+
+load_dotenv()
 
 CTA1_START = "<!-- AB:CTA1:START -->"
 CTA1_END = "<!-- AB:CTA1:END -->"
@@ -16,7 +21,7 @@ CTA2_END = "<!-- AB:CTA2:END -->"
 RELATED_START = "<!-- AB:RELATED:START -->"
 RELATED_END = "<!-- AB:RELATED:END -->"
 
-# Partner resolution (no affiliates.json). You can extend this.
+# Partner resolution (no affiliates.json). Extend as needed.
 # If pages.csv contains direct URLs (e.g. /go/booking) those will be used as-is.
 PARTNERS = {
     "booking": {"url": "/go/booking", "label": "Check availability"},
@@ -24,16 +29,6 @@ PARTNERS = {
     "housinganywhere": {"url": "/go/housinganywhere", "label": "View rentals"},
     "airbnb": {"url": "/go/airbnb", "label": "See listings"},
 }
-
-PILLAR_SLUGS = [
-    "apartments-in-budapest",
-    "budapest-district-guide",
-    "where-to-live-in-budapest",
-    "monthly-rentals-budapest",
-    "student-apartments-budapest",
-    "housing-for-expats-budapest",
-    "digital-nomad-apartments-budapest",
-]
 
 ENCODINGS_TO_TRY = ("utf-8-sig", "utf-8", "cp1250", "iso-8859-2", "cp1252")
 
@@ -87,64 +82,99 @@ def resolve_partner(value: str, fallback_label: str) -> Optional[Dict[str, str]]
         return PARTNERS[key]
 
     if looks_like_url(value):
-        # Direct URL in CSV; label falls back to generic text
         return {"url": value, "label": fallback_label}
 
-    # Unknown partner key and not a URL -> treat as misconfiguration
     return None
 
 
-def load_pages_index() -> Dict[str, Dict[str, str]]:
-    if not PAGES_CSV.exists():
-        raise SystemExit(f"Missing {PAGES_CSV}")
+def load_pages_index(pages_csv: Path) -> Tuple[Dict[str, Dict[str, str]], List[str]]:
+    """
+    Returns:
+      - pages index keyed by slug
+      - pillar slugs (derived from gen=stub rows)
+    """
+    if not pages_csv.exists():
+        raise SystemExit(f"Missing {pages_csv}")
 
-    text = read_text_best_effort(PAGES_CSV)
+    text = read_text_best_effort(pages_csv)
     reader = csv.DictReader(io.StringIO(text))
 
     idx: Dict[str, Dict[str, str]] = {}
+    pillar_slugs: List[str] = []
+
     for row in reader:
         slug = (row.get("slug") or "").strip()
         if not slug:
             continue
+
+        gen = (row.get("gen") or "").strip().lower()
+        if gen == "stub":
+            pillar_slugs.append(slug)
+
         idx[slug] = {
             "title": (row.get("title") or slug).strip(),
             "intent": (row.get("intent") or "").strip().lower(),
             "area": (row.get("area") or "").strip(),
-            "gen": (row.get("gen") or "").strip().lower(),
+            "gen": gen,
             "primary_partner": (row.get("primary_partner") or "").strip(),
             "secondary_partner": (row.get("secondary_partner") or "").strip(),
         }
-    return idx
+
+    return idx, pillar_slugs
 
 
-def build_related_links(current_slug: str, pages: Dict[str, Dict[str, str]]) -> str:
+def available_slugs_for_lang(drafts_root: Path, site_key: str, lang: str) -> Set[str]:
+    """
+    Return the set of slugs that have draft JSON files in drafts/<site>/<lang>/.
+    """
+    p = drafts_root / site_key / lang
+    if not p.exists():
+        return set()
+    return {fp.stem for fp in p.glob("*.json") if fp.name != "_manifest.json" and not fp.name.startswith("_manifest")}
+
+
+def make_href(target_slug: str, *, lang: str, translated_slugs: Set[str]) -> str:
+    """
+    Language-aware internal link strategy for WP page hierarchy:
+      - If lang == 'en': /<slug>/
+      - Else: prefer /<lang>/<slug>/ if that translated page exists, else fallback to /<slug>/
+    """
+    target_slug = target_slug.strip().strip("/")
+    if lang == "en":
+        return f"/{target_slug}/"
+    if target_slug in translated_slugs:
+        return f"/{lang}/{target_slug}/"
+    return f"/{target_slug}/"
+
+
+def build_related_links(
+    current_slug: str,
+    pages: Dict[str, Dict[str, str]],
+    pillar_slugs: List[str],
+    *,
+    lang: str,
+    translated_slugs: Set[str],
+) -> str:
     """
     Related links block:
-    - Always include the pillar pages that exist in pages.csv
-    - If intent=monthly: include monthly-rentals-budapest, else where-to-live-in-budapest
-    - Neighbor districts: n-1 and n+1 (if present in pages.csv)
+    - Pillars: gen=stub rows from THIS site's pages.csv
+    - Neighbor districts: n-1 and n+1 (if present in THIS site's pages.csv)
+    - Links prefer same-language URLs when translated draft exists
     """
-    current = pages.get(current_slug, {})
-    intent = (current.get("intent") or "").lower()
-
     links: List[Tuple[str, str]] = []
 
     def add_link(target_slug: str):
         if target_slug not in pages:
             return
         title = pages[target_slug].get("title") or target_slug
-        links.append((f"/{target_slug.strip('/')}/", title))
+        href = make_href(target_slug, lang=lang, translated_slugs=translated_slugs)
+        links.append((href, title))
 
-    # Pillars
-    for p in PILLAR_SLUGS:
-        # Conditional monthly vs where-to-live selection
-        if p == "monthly-rentals-budapest" and intent != "monthly":
-            continue
-        if p == "where-to-live-in-budapest" and intent == "monthly":
-            continue
+    # Pillars (site-scoped)
+    for p in pillar_slugs:
         add_link(p)
 
-    # Neighbor districts
+    # Neighbor districts (site-scoped)
     n = parse_district_number(current_slug)
     if n is not None:
         for nn in (n - 1, n + 1):
@@ -200,6 +230,10 @@ def inject_into_html(
     draft: Dict[str, Any],
     page_row: Dict[str, str],
     pages: Dict[str, Dict[str, str]],
+    pillar_slugs: List[str],
+    *,
+    lang: str,
+    translated_slugs: Set[str],
 ) -> str:
     # Idempotent cleanup
     html = remove_marked_block(html, CTA1_START, CTA1_END)
@@ -208,13 +242,13 @@ def inject_into_html(
 
     slug = (draft.get("slug") or "").strip()
 
-    # CTA copy must come from the draft JSON (generated by AI). No defaults.
+    # CTA copy from draft JSON
     cta1_h = (draft.get("cta_primary_headline") or "").strip()
     cta1_t = (draft.get("cta_primary_text") or "").strip()
     cta2_h = (draft.get("cta_secondary_headline") or "").strip()
     cta2_t = (draft.get("cta_secondary_text") or "").strip()
 
-    # Partner href/label come from pages.csv partner columns
+    # Partner href/label from pages.csv
     primary_partner_val = (page_row.get("primary_partner") or "").strip()
     secondary_partner_val = (page_row.get("secondary_partner") or "").strip()
 
@@ -233,7 +267,7 @@ def inject_into_html(
     else:
         print(f"[WARN] CTA2 not injected for {slug} (missing copy or secondary_partner)")
 
-    related = build_related_links(slug, pages)
+    related = build_related_links(slug, pages, pillar_slugs, lang=lang, translated_slugs=translated_slugs)
 
     # Insert CTA1 right after first </h2>
     if cta1:
@@ -255,22 +289,97 @@ def inject_into_html(
     return html.strip()
 
 
-def main() -> None:
-    pages = load_pages_index()
+def iter_drafts(drafts_dir: Path) -> List[Path]:
+    if any(drafts_dir.glob("*.json")):
+        return sorted(drafts_dir.glob("*.json"))
+    return sorted(drafts_dir.glob("**/*.json"))
 
-    if not DRAFTS_DIR.exists():
+
+def infer_lang_from_path(path: Path, site_key: str) -> str:
+    """
+    drafts/<site>/<lang>/<slug>.json -> returns <lang>
+    If not inferable, default to 'en'.
+    """
+    parts = path.parts
+    try:
+        idx = parts.index("drafts")
+        if idx + 2 < len(parts) and parts[idx + 1] == site_key:
+            return parts[idx + 2].lower()
+    except ValueError:
+        pass
+    return "en"
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--site", default=os.getenv("SITE_KEY", "default"))
+    ap.add_argument("--lang", default=None, help="If omitted, process all languages under drafts/<site>/")
+    ap.add_argument("--dir", default="drafts", help="Drafts root directory")
+    args = ap.parse_args()
+
+    site = load_site_config(args.site)
+    pages_csv = site_input_path(site.site_key, "pages.csv")
+    pages, pillar_slugs = load_pages_index(pages_csv)
+
+    drafts_root = Path(args.dir)
+    if not drafts_root.exists():
         raise SystemExit("drafts/ not found. Run generate.py first.")
 
-    for draft_path in sorted(DRAFTS_DIR.glob("*.json")):
+    if args.lang:
+        drafts_dir = drafts_root / site.site_key / args.lang.strip().lower()
+    else:
+        drafts_dir = drafts_root / site.site_key
+
+    if not drafts_dir.exists():
+        raise SystemExit(f"Drafts directory not found: {drafts_dir}")
+
+    print(f"Using pages: {pages_csv}")
+    print(f"Processing drafts: {drafts_dir}")
+
+    # Precompute translated slugs for explicit lang runs; for multi-lang run we compute per draft lang.
+    translated_slugs_for_explicit_lang: Set[str] = set()
+    explicit_lang = None
+    if args.lang:
+        explicit_lang = args.lang.strip().lower()
+        translated_slugs_for_explicit_lang = available_slugs_for_lang(drafts_root, site.site_key, explicit_lang)
+
+    for draft_path in iter_drafts(drafts_dir):
+        if draft_path.name.startswith("_manifest"):
+            continue
+
         with draft_path.open(encoding="utf-8") as f:
             draft = json.load(f)
 
+        # Safety check: if draft says it's from another site, skip it.
+        draft_site = (draft.get("site_key") or "").strip()
+        if draft_site and draft_site != site.site_key:
+            print(f"[WARN] Skip draft from different site ({draft_site}): {draft_path}")
+            continue
+
         slug = (draft.get("slug") or draft_path.stem).strip()
-        draft["slug"] = slug  # ensure present
+        draft["slug"] = slug
+
+        # Determine language context for link building
+        draft_lang = (draft.get("lang") or "").strip().lower()
+        if not draft_lang:
+            draft_lang = explicit_lang or infer_lang_from_path(draft_path, site.site_key)
+
+        if explicit_lang:
+            translated_slugs = translated_slugs_for_explicit_lang
+        else:
+            translated_slugs = available_slugs_for_lang(drafts_root, site.site_key, draft_lang)
 
         page_row = pages.get(slug, {})
         html = draft.get("html") or ""
-        draft["html"] = inject_into_html(html, draft, page_row, pages)
+        draft["html"] = inject_into_html(
+            html,
+            draft,
+            page_row,
+            pages,
+            pillar_slugs,
+            lang=draft_lang,
+            translated_slugs=translated_slugs,
+        )
 
         with draft_path.open("w", encoding="utf-8") as f:
             json.dump(draft, f, indent=2, ensure_ascii=False)

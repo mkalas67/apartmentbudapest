@@ -1,4 +1,4 @@
-You are generating an SEO page bundle for apartment in Budapest.
+You are generating an SEO page bundle for apartments in {city}.
 
 Return ONLY valid JSON (no markdown, no commentary) with exactly these keys:
 - meta_description: string, MUST be 140-155 characters inclusive (count every character, including spaces). If your first draft is outside 140-155, rewrite and re-count until it is within range; output only the final compliant string.
@@ -14,38 +14,62 @@ Keyword + meta alignment rules (STRICT):
    - Area: {area}
    - Intent: {intent}
    - Page title: {title}
-   It MUST include the area name (or district label) and “budapest” unless the area already contains “budapest”.
+   It MUST include the area name (or district label) and “{city}” unless the area already contains “{city}”.
 2) meta_description MUST:
    - include the primary_key_word verbatim (exact same characters, same spacing)
    - mention the area ({area}) if it is not already part of primary_key_word
    - reflect the page intent ({intent}) in plain language
-   - be 140–160 characters (inclusive)
+   - be 140–155 characters (inclusive)
 3) html MUST be built around the primary_key_word:
    - Include primary_key_word verbatim in the FIRST 100 words.
    - Include primary_key_word verbatim in at least 4 of the 6 required sections (Overview → Next steps).
    - Include primary_key_word verbatim in at least 2 of the 4 FAQ questions (<h3>).
    - Keep total exact-match uses natural (aim 6–12 times). No keyword stuffing.
 4) The first sentence in the Overview section MUST be exactly the meta_description text (verbatim), wrapped in a <p>.
+Normalization:
+- Treat intent comparisons case-insensitively. "Pillar", "pillar", "PILLAR" are the same.
+
 
 If {area} contains a Roman numeral district (e.g., “District V”), you MUST use Arabic numerals for primary_key_word and exact-match occurrences in html (e.g., “District 5”). In the first mention in the Overview, write “District 5 (District V)”.
 
-Hard rules for html:
-- No affiliate links, no platform names, no fake prices.
-- Length 800-1200 words (count only visible text, not tags/attributes).
-- Use these exact <h2> headings in this order:
-  1) Overview
-  2) Who this area is best for
-  3) What to expect (pros/cons)
-  4) Transport and walkability
-  5) Things to watch out for
-  6) Next steps
-- End with <h2>FAQ</h2> and 4 Q&As, using <h3> for questions.
-- Keep content specific to {area} within Budapest and consistent with {intent}.
-- Use clear, factual, decision-support language (not salesy).
-- You may use synonyms/variants (e.g., “neighborhood”, “district”, “area”) but NEVER replace the exact primary_key_word requirement above.
+PAGE TYPE RULES (STRICT):
+Determine page type from {intent}:
+- If intent is "pillar" (case-insensitive), treat this as a PILLAR GUIDE page.
+- Otherwise, treat this as an INTENT-LED page and build around the specific intent.
+
+PILLAR GUIDE MODE (intent="pillar"):
+- This is an evergreen overview guide for {area} in {city}.
+- Use a decision-support tone (help the reader choose, compare, shortlist).
+- Focus on these topics (must be clearly covered as the core of the page):
+  1) Overview: what the area is like and what decisions the reader is making.
+  2) Who this is best for: 4–7 concrete personas (bullet points) that map to typical renters.
+  3) What to expect (pros/cons): balanced list, practical trade-offs, avoid hype.
+  4) Transport and walkability: explain how people typically get around, what’s easy vs annoying.
+  5) Things to watch out for: deposits/contracts/scams, noise, building quality, seasonal availability, hidden costs.
+- Keep claims conservative. If you are not sure about a specific local fact, phrase it generally (do not invent metro line numbers, exact travel times, or specific station names unless you are confident).
+- The page should be broadly useful even without hyper-local trivia.
+
+INTENT-LED MODE (all other intents):
+- Build the page around the specific intent {intent} (who is searching and why).
+- The content should answer the user’s intent first, then support it with area-specific context.
+- Examples of intent-led angles (choose those that fit):
+  - "families": schools/parks/space/safety/noise, practical family logistics
+  - "students": budget, commute to campuses, room shares, nightlife vs quiet
+  - "digital nomads": cafes/workspaces, short-term flexibility, walkability
+  - "luxury": building quality, amenities, quieter streets, premium trade-offs
+  - "budget": realistic compromises, where to save money, common pitfalls
+- Still include balanced pros/cons, transport, and pitfalls, but prioritize content that serves the intent.
+FAQ RULES (MANDATORY):
+- End with <h2>FAQ</h2> and exactly 4 Q&As.
+- Each question must be an <h3> and each answer a <p>.
+- At least 2 of the 4 questions MUST contain primary_key_word verbatim.
+- If intent is "pillar": FAQs should focus on choosing the area, budgeting, viewing, contracts, scams, seasonality.
+- Otherwise: FAQs should focus on the specific intent {intent} (e.g., families/students/nomads) while staying specific to {area} in {city}.
+
+
 
 Context:
-- City: Budapest
+- City: {city}
 - Page title: {title}
 - Area: {area}
 - Intent: {intent}

@@ -2,135 +2,172 @@ import argparse
 import json
 import os
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import requests
 from requests.auth import HTTPBasicAuth
 from dotenv import load_dotenv
 
+from site_config import load_site_config
+
 load_dotenv()
 
-WP_BASE_URL = os.environ["WP_BASE_URL"].rstrip("/")
-WP_USERNAME = os.environ["WP_USERNAME"]
-WP_APP_PASSWORD = os.environ["WP_APP_PASSWORD"]
 
-auth = HTTPBasicAuth(WP_USERNAME, WP_APP_PASSWORD)
-PAGES_API = f"{WP_BASE_URL}/wp-json/wp/v2/pages"
+def wp_pages_api(base_url: str) -> str:
+    return f"{base_url.rstrip('/')}/wp-json/wp/v2/pages"
 
 
-def get_page_by_slug(slug: str) -> Optional[Dict[str, Any]]:
+def get_pages_by_slug(pages_api: str, auth: HTTPBasicAuth, slug: str) -> List[Dict[str, Any]]:
     r = requests.get(
-        PAGES_API,
+        pages_api,
         params={
             "slug": slug,
-            "status": "any",   # include drafts
             "per_page": 100,
-            "context": "edit",
+            # "context": "edit",  # keep if your app password user has rights; otherwise comment out
         },
         auth=auth,
         timeout=30,
     )
     r.raise_for_status()
-    items = r.json()
-    if len(items) > 1:
-        raise RuntimeError(f"Multiple pages found for slug '{slug}'. Clean duplicates in WP first.")
-    return items[0] if items else None
+    return r.json()
 
 
-def _post_with_fallback(url: str, payload: Dict[str, Any]) -> requests.Response:
+def find_page_by_slug_and_parent(
+    pages_api: str, auth: HTTPBasicAuth, slug: str, parent_id: int
+) -> Optional[Dict[str, Any]]:
+    items = get_pages_by_slug(pages_api, auth, slug)
+    matches = [p for p in items if int(p.get("parent", 0)) == int(parent_id)]
+    if len(matches) > 1:
+        raise RuntimeError(f"Multiple pages found for slug='{slug}' and parent={parent_id}. Clean duplicates in WP.")
+    return matches[0] if matches else None
+
+
+def ensure_language_root(pages_api: str, auth: HTTPBasicAuth, lang: str) -> int:
     """
-    Try full payload. If WP rejects unsupported fields (excerpt/meta), retry without them.
+    Ensure top-level page exists with slug == lang (e.g. "de"), parent == 0.
+    Returns its page ID.
     """
-    r = requests.post(url, json=payload, auth=auth, timeout=30)
-    if r.status_code < 400:
-        return r
+    lang = lang.strip().lower()
+    existing = find_page_by_slug_and_parent(pages_api, auth, lang, parent_id=0)
+    if existing:
+        return int(existing["id"])
 
-    try:
-        err = r.json()
-        bad_params = (err.get("data") or {}).get("params") or {}
-    except Exception:
-        bad_params = {}
+    payload = {
+        "slug": lang,
+        "title": lang.upper(),
+        "content": f"<h2>{lang.upper()}</h2><p>Language hub page.</p>",
+        "status": "publish",  # root should exist; change to "draft" if you prefer
+        "parent": 0,
+    }
 
-    # Typical WP error: data.params includes invalid fields
-    retry_payload = dict(payload)
+    r = requests.post(pages_api, json=payload, auth=auth, timeout=30)
+    if r.status_code >= 400:
+        raise RuntimeError(f"Failed to create language root '{lang}': {r.status_code} {r.text}")
 
-    if "excerpt" in bad_params and "excerpt" in retry_payload:
-        retry_payload.pop("excerpt", None)
-
-    if "meta" in bad_params and "meta" in retry_payload:
-        retry_payload.pop("meta", None)
-
-    # If we removed anything, retry once
-    if retry_payload != payload:
-        r2 = requests.post(url, json=retry_payload, auth=auth, timeout=30)
-        return r2
-
-    return r  # original failure
+    created = r.json()
+    return int(created["id"])
 
 
 def upsert_page(
     *,
+    pages_api: str,
+    auth: HTTPBasicAuth,
     slug: str,
+    parent_id: int,
     title: str,
     html: str,
     status: str,
     meta_description: str = "",
     primary_key_word: str = "",
 ) -> Tuple[Dict[str, Any], str]:
-    existing = get_page_by_slug(slug)
+    existing = find_page_by_slug_and_parent(pages_api, auth, slug, parent_id=parent_id)
 
     payload: Dict[str, Any] = {
         "slug": slug,
         "title": title,
         "content": html,
         "status": status,
+        "parent": parent_id,
     }
 
-    # SEO: meta description -> excerpt (WP core field)
+    # Optional: store meta_description as excerpt (works even without RankMath)
     if meta_description.strip():
         payload["excerpt"] = meta_description.strip()
 
-    # SEO: primary keyword -> custom meta (optional; WP must allow meta via REST)
+    # Optional: custom meta field (may be rejected by WP depending on config)
     if primary_key_word.strip():
         payload["meta"] = {"ab_primary_key_word": primary_key_word.strip()}
 
-    # Nice safety warning if you forgot to run inject.py
-    if "AB:CTA" not in html and "AB:RELATED" not in html:
-        print(f"[WARN] {slug}: No injected CTA/RELATED markers found in HTML. Did you run inject.py?")
-
     if existing:
         page_id = existing["id"]
-        r = _post_with_fallback(f"{PAGES_API}/{page_id}", payload)
+        r = requests.post(f"{pages_api}/{page_id}", json=payload, auth=auth, timeout=30)
         if r.status_code >= 400:
-            raise RuntimeError(f"Update failed for {slug}: {r.status_code} {r.text}")
+            raise RuntimeError(f"Update failed for slug='{slug}' parent={parent_id}: {r.status_code} {r.text}")
         return r.json(), "updated"
 
-    r = _post_with_fallback(PAGES_API, payload)
+    r = requests.post(pages_api, json=payload, auth=auth, timeout=30)
     if r.status_code >= 400:
-        raise RuntimeError(f"Create failed for {slug}: {r.status_code} {r.text}")
+        raise RuntimeError(f"Create failed for slug='{slug}' parent={parent_id}: {r.status_code} {r.text}")
     return r.json(), "created"
 
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--status", default="draft", choices=["draft", "publish"], help="WP page status")
-    ap.add_argument("--dir", default="drafts", help="Directory containing draft JSON files")
+    ap.add_argument("--site", default=os.getenv("SITE_KEY", "default"))
+    ap.add_argument("--lang", default=None, help="Language folder under drafts/<site>/<lang> (default: site default)")
+    ap.add_argument("--status", default="draft", choices=["draft", "publish"])
+    ap.add_argument("--dir", default="drafts")
+    ap.add_argument("--env_dir", default="sites", help="Directory containing per-site env files (default: sites/)")
     args = ap.parse_args()
 
-    drafts_dir = Path(args.dir)
+    # Load site-specific WP creds (override anything already loaded)
+    site_env_path = Path(args.env_dir) / f"{args.site}.env"
+    load_dotenv(dotenv_path=site_env_path, override=True)
+
+    site = load_site_config(args.site)
+    lang = (args.lang or site.default_language or "en").strip().lower()
+
+    wp_base = os.getenv("WP_BASE_URL", "").strip()
+    wp_user = os.getenv("WP_USERNAME", "").strip()
+    wp_pass = os.getenv("WP_APP_PASSWORD", "").strip()
+    if not wp_base or not wp_user or not wp_pass:
+        raise SystemExit(f"Missing WP_BASE_URL, WP_USERNAME, WP_APP_PASSWORD in {site_env_path}.")
+
+    auth = HTTPBasicAuth(wp_user, wp_pass)
+    pages_api = wp_pages_api(wp_base)
+
+    drafts_dir = Path(args.dir) / site.site_key / lang
     if not drafts_dir.exists():
         raise SystemExit(f"Drafts directory not found: {drafts_dir}")
 
+    # Determine parent: EN top-level; non-EN under /<lang>/
+    parent_id = 0
+    if lang != "en":
+        parent_id = ensure_language_root(pages_api, auth, lang)
+
     for path in sorted(drafts_dir.glob("*.json")):
+        # ✅ Skip manifest files so they are never published
+        if path.name.startswith("_manifest"):
+            continue
+
         with open(path, encoding="utf-8") as f:
             draft = json.load(f)
+
+        # Safety check (prevents cross-site accidents)
+        draft_site = (draft.get("site_key") or "").strip()
+        if draft_site and draft_site != site.site_key:
+            print(f"[WARN] Skip draft from different site ({draft_site}): {path}")
+            continue
 
         slug = (draft.get("slug") or path.stem).strip()
         title = (draft.get("title") or slug).strip()
         html = (draft.get("html") or "").strip()
 
         page, action = upsert_page(
+            pages_api=pages_api,
+            auth=auth,
             slug=slug,
+            parent_id=parent_id,
             title=title,
             html=html,
             status=args.status,
@@ -138,7 +175,8 @@ def main() -> None:
             primary_key_word=(draft.get("primary_key_word") or ""),
         )
 
-        print(action, slug, page.get("link"))
+        print(action, f"{lang}/{slug}" if lang != "en" else slug, page.get("link"))
+
 
 
 if __name__ == "__main__":
