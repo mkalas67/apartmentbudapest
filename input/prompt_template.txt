@@ -1,7 +1,7 @@
 You are generating an SEO page bundle for apartments in {city}.
 
 Return ONLY valid JSON (no markdown, no commentary) with exactly these keys:
-- meta_description: string, MUST be 140-155 characters inclusive (count every character, including spaces). If your first draft is outside 140-155, rewrite and re-count until it is within range; output only the final compliant string.
+- meta_description: string, MUST be 140-155 characters inclusive (count every character, including spaces).
 - primary_key_word: string, 2-6 words, lowercase unless proper noun.
 - cta_primary_headline: string, <= 8 words, no platform names.
 - cta_primary_text: string, <= 22 words, no platform names, no affiliate language.
@@ -9,67 +9,124 @@ Return ONLY valid JSON (no markdown, no commentary) with exactly these keys:
 - cta_secondary_text: string, <= 22 words, no platform names, no affiliate language.
 - html: string, the full page body in HTML (NOT Markdown). Do NOT include <h1>.
 
-Keyword + meta alignment rules (STRICT):
-1) Choose primary_key_word to match the most likely search query for this page given:
+Context:
+- City: {city}
+- Page title: {title}
+- Area: {area}
+- Intent: {intent}
+- Existing meta description: {meta_description}
+- Existing primary keyword: {primary_key_word}
+- Has meta description already been provided? {has_meta_description}
+- Has primary keyword already been provided? {has_primary_key_word}
+
+GENERAL WRITING RULES:
+- Write for a real user choosing where or how to rent in {city}.
+- Keep the tone practical, specific, and decision-supportive.
+- Do not sound like an ad.
+- Do not invent listings, prices, statistics, travel times, station names, landlord policies, or legal claims.
+- If a local fact is uncertain, phrase it generally and conservatively.
+- Avoid fluff, filler, hype, and repetition.
+- Keep the copy natural and readable, not mechanically SEO-driven.
+
+SEO + KEYWORD RULES (STRICT):
+1) If an existing primary keyword is provided ({has_primary_key_word} = yes), use it unchanged as primary_key_word.
+2) If no primary keyword is provided, choose primary_key_word to match the most likely search query for this page given:
    - Area: {area}
    - Intent: {intent}
    - Page title: {title}
-   It MUST include the area name (or district label) and “{city}” unless the area already contains “{city}”.
-2) meta_description MUST:
-   - include the primary_key_word verbatim (exact same characters, same spacing)
-   - mention the area ({area}) if it is not already part of primary_key_word
-   - reflect the page intent ({intent}) in plain language
-   - be 140–155 characters (inclusive)
-3) html MUST be built around the primary_key_word:
+   It MUST include the area name (or district label) and "{city}" unless the area already contains "{city}".
+3) If an existing meta description is provided ({has_meta_description} = yes), use it unchanged as meta_description.
+4) If no meta description is provided, create one that:
+   - includes the primary_key_word verbatim
+   - mentions the area ({area}) if it is not already part of primary_key_word
+   - reflects the page intent ({intent}) in plain language
+   - is 140-155 characters inclusive
+5) html MUST be built around the primary_key_word:
    - Include primary_key_word verbatim in the FIRST 100 words.
-   - Include primary_key_word verbatim in at least 4 of the 6 required sections (Overview → Next steps).
-   - Include primary_key_word verbatim in at least 2 of the 4 FAQ questions (<h3>).
-   - Keep total exact-match uses natural (aim 6–12 times). No keyword stuffing.
-4) The first sentence in the Overview section MUST be exactly the meta_description text (verbatim), wrapped in a <p>.
-Normalization:
-- Treat intent comparisons case-insensitively. "Pillar", "pillar", "PILLAR" are the same.
+   - Include primary_key_word naturally across the page, including several major sections and relevant FAQs.
+   - Keep total exact-match uses natural. Avoid keyword stuffing.
+6) In the Overview section, the opening paragraph must align with the same promise and search intent as the meta_description, but MUST NOT copy it verbatim unless it reads naturally as body copy.
 
+NORMALIZATION:
+- Treat intent comparisons case-insensitively. "Pillar", "pillar", and "PILLAR" are the same.
 
-If {area} contains a Roman numeral district (e.g., “District V”), you MUST use Arabic numerals for primary_key_word and exact-match occurrences in html (e.g., “District 5”). In the first mention in the Overview, write “District 5 (District V)”.
+DISTRICT FORMAT RULE:
+- If {area} contains a Roman numeral district (for example, "District V"), use Arabic numerals for primary_key_word and exact-match occurrences in html (for example, "District 5").
+- In the first natural mention in the Overview, write "District 5 (District V)".
 
 PAGE TYPE RULES (STRICT):
 Determine page type from {intent}:
 - If intent is "pillar" (case-insensitive), treat this as a PILLAR GUIDE page.
 - Otherwise, treat this as an INTENT-LED page and build around the specific intent.
 
-PILLAR GUIDE MODE (intent="pillar"):
+PILLAR GUIDE MODE (intent = pillar):
 - This is an evergreen overview guide for {area} in {city}.
-- Use a decision-support tone (help the reader choose, compare, shortlist).
-- Focus on these topics (must be clearly covered as the core of the page):
-  1) Overview: what the area is like and what decisions the reader is making.
-  2) Who this is best for: 4–7 concrete personas (bullet points) that map to typical renters.
-  3) What to expect (pros/cons): balanced list, practical trade-offs, avoid hype.
-  4) Transport and walkability: explain how people typically get around, what’s easy vs annoying.
-  5) Things to watch out for: deposits/contracts/scams, noise, building quality, seasonal availability, hidden costs.
-- Keep claims conservative. If you are not sure about a specific local fact, phrase it generally (do not invent metro line numbers, exact travel times, or specific station names unless you are confident).
-- The page should be broadly useful even without hyper-local trivia.
+- Use a decision-support tone: help the reader choose, compare, and shortlist.
+- Clearly cover these core topics:
+  1) Overview: what the area is like and what decisions the reader is making
+  2) Who this is best for: 4-7 concrete renter personas in bullet points
+  3) What to expect: balanced pros and cons, practical trade-offs, no hype
+  4) Transport and walkability: how people typically get around, what is easy vs inconvenient
+  5) Things to watch out for: deposits, contracts, scams, noise, building quality, seasonal availability, hidden costs
+- The page should remain useful even without hyper-local trivia.
 
-INTENT-LED MODE (all other intents):
-- Build the page around the specific intent {intent} (who is searching and why).
-- The content should answer the user’s intent first, then support it with area-specific context.
-- Examples of intent-led angles (choose those that fit):
-  - "families": schools/parks/space/safety/noise, practical family logistics
-  - "students": budget, commute to campuses, room shares, nightlife vs quiet
-  - "digital nomads": cafes/workspaces, short-term flexibility, walkability
-  - "luxury": building quality, amenities, quieter streets, premium trade-offs
-  - "budget": realistic compromises, where to save money, common pitfalls
-- Still include balanced pros/cons, transport, and pitfalls, but prioritize content that serves the intent.
+INTENT-LED MODE (all non-pillar intents):
+- Build the page around the specific intent {intent}: who is searching and why.
+- Answer the user intent first, then support it with area-specific context.
+- Use the most relevant angle(s) for the intent. Examples:
+  - families: schools, parks, space, quieter streets, practical family logistics
+  - students: budget, shared flats, commute, nightlife vs quiet, lease flexibility
+  - digital nomads: flexibility, cafes/work-friendly areas, short-term practicality, walkability
+  - luxury: building quality, amenities, comfort, quieter premium pockets, trade-offs
+  - budget: compromises, value areas, realistic expectations, common pitfalls
+- Still include balanced pros/cons, transport, and pitfalls, but prioritise the intent.
+
+HTML STRUCTURE RULES (STRICT):
+The html value MUST contain these sections in this order:
+1) <h2>Overview</h2>
+2) <h2>Who this is best for</h2>
+3) <h2>What to expect</h2>
+4) <h2>Transport and walkability</h2>
+5) <h2>Things to watch out for</h2>
+6) <h2>Next steps</h2>
+7) <h2>FAQ</h2>
+
+SECTION RULES:
+- Overview:
+  - Start with a natural paragraph introducing the page topic and intent.
+  - It should read like editorial body copy, not a pasted snippet.
+- Who this is best for:
+  - Include a <ul> with 4-7 <li> items.
+  - Each item should describe a concrete type of renter or searcher.
+- What to expect:
+  - Include balanced pros and cons or equivalent trade-offs.
+  - Avoid absolute claims.
+- Transport and walkability:
+  - Focus on practical movement and convenience, not fabricated specifics.
+- Things to watch out for:
+  - Cover realistic rental friction points and risks.
+- Next steps:
+  - End with a short, action-oriented section that helps the reader decide what to do next.
+  - Keep it practical and neutral.
+
 FAQ RULES (MANDATORY):
 - End with <h2>FAQ</h2> and exactly 4 Q&As.
 - Each question must be an <h3> and each answer a <p>.
-- At least 2 of the 4 questions MUST contain primary_key_word verbatim.
-- If intent is "pillar": FAQs should focus on choosing the area, budgeting, viewing, contracts, scams, seasonality.
-- Otherwise: FAQs should focus on the specific intent {intent} (e.g., families/students/nomads) while staying specific to {area} in {city}.
+- At least 2 of the 4 questions should contain primary_key_word verbatim, but only where it sounds natural.
+- If intent is pillar:
+  - FAQs should focus on choosing the area, budgeting, viewing, contracts, scams, or seasonality.
+- Otherwise:
+  - FAQs should focus on the specific intent {intent} while staying specific to {area} in {city}.
 
+CTA COPY RULES:
+- cta_primary_headline and cta_secondary_headline must be short, neutral, and action-oriented.
+- cta_primary_text and cta_secondary_text must be concise and helpful.
+- Do not mention partner names, affiliate language, tracking, deals, or promises.
 
-
-Context:
-- City: {city}
-- Page title: {title}
-- Area: {area}
-- Intent: {intent}
+FINAL QUALITY CHECK BEFORE OUTPUT:
+- Output valid JSON only.
+- Keep any provided meta_description unchanged.
+- Keep any provided primary_key_word unchanged.
+- Ensure meta_description is 140-155 characters inclusive.
+- Ensure html is valid HTML body content without <h1>.
+- Ensure the page reads naturally and is not obviously templated.

@@ -21,13 +21,18 @@ CTA2_END = "<!-- AB:CTA2:END -->"
 RELATED_START = "<!-- AB:RELATED:START -->"
 RELATED_END = "<!-- AB:RELATED:END -->"
 
-# Partner resolution (no affiliates.json). Extend as needed.
-# If pages.csv contains direct URLs (e.g. /go/booking) those will be used as-is.
+# Redirect resolution.
+# Values in pages.csv can now be:
+#   - a known key from PARTNERS, e.g. "booking"
+#   - a bare redirect slug, e.g. "expats"
+#   - a full internal path, e.g. "/go/expats"
+#
+# This script should not hold final affiliate destination URLs.
 PARTNERS = {
-    "booking": {"url": "/go/booking", "label": "Check availability"},
-    "spotahome": {"url": "/go/spotahome", "label": "Browse monthly rentals"},
-    "housinganywhere": {"url": "/go/housinganywhere", "label": "View rentals"},
-    "airbnb": {"url": "/go/airbnb", "label": "See listings"},
+    "booking": {"slug": "booking", "label": "Check availability"},
+    "spotahome": {"slug": "spotahome", "label": "Browse monthly rentals"},
+    "housinganywhere": {"slug": "housinganywhere", "label": "View rentals"},
+    "airbnb": {"slug": "airbnb", "label": "See listings"},
 }
 
 ENCODINGS_TO_TRY = ("utf-8-sig", "utf-8", "cp1250", "iso-8859-2", "cp1252")
@@ -62,29 +67,42 @@ def parse_district_number(slug: str) -> Optional[int]:
     return int(m.group(1)) if m else None
 
 
-def looks_like_url(s: str) -> bool:
-    s = s.strip().lower()
-    return s.startswith("/") or s.startswith("http://") or s.startswith("https://")
+def build_redirect_path(slug: str) -> str:
+    slug = (slug or "").strip().strip("/")
+    return f"/go/{slug}"
+
+
+def looks_like_path(s: str) -> bool:
+    s = s.strip()
+    return s.startswith("/")
 
 
 def resolve_partner(value: str, fallback_label: str) -> Optional[Dict[str, str]]:
     """
     Accepts either:
       - a partner key in PARTNERS (e.g. "booking")
-      - a direct URL/path (e.g. "/go/booking" or "https://...")
+      - a bare redirect slug (e.g. "expats")
+      - a site path (e.g. "/go/expats")
+    Returns an internal redirect path only.
     """
     value = (value or "").strip()
     if not value:
         return None
 
     key = value.lower()
-    if key in PARTNERS:
-        return PARTNERS[key]
 
-    if looks_like_url(value):
+    if key in PARTNERS:
+        partner = PARTNERS[key]
+        return {
+            "url": build_redirect_path(partner["slug"]),
+            "label": partner["label"],
+        }
+
+    if looks_like_path(value):
         return {"url": value, "label": fallback_label}
 
-    return None
+    # Treat anything else as a bare redirect slug
+    return {"url": build_redirect_path(value), "label": fallback_label}
 
 
 def load_pages_index(pages_csv: Path) -> Tuple[Dict[str, Dict[str, str]], List[str]]:
@@ -130,7 +148,11 @@ def available_slugs_for_lang(drafts_root: Path, site_key: str, lang: str) -> Set
     p = drafts_root / site_key / lang
     if not p.exists():
         return set()
-    return {fp.stem for fp in p.glob("*.json") if fp.name != "_manifest.json" and not fp.name.startswith("_manifest")}
+    return {
+        fp.stem
+        for fp in p.glob("*.json")
+        if fp.name != "_manifest.json" and not fp.name.startswith("_manifest")
+    }
 
 
 def make_href(target_slug: str, *, lang: str, translated_slugs: Set[str]) -> str:
@@ -170,11 +192,9 @@ def build_related_links(
         href = make_href(target_slug, lang=lang, translated_slugs=translated_slugs)
         links.append((href, title))
 
-    # Pillars (site-scoped)
     for p in pillar_slugs:
         add_link(p)
 
-    # Neighbor districts (site-scoped)
     n = parse_district_number(current_slug)
     if n is not None:
         for nn in (n - 1, n + 1):
@@ -182,7 +202,6 @@ def build_related_links(
             if neighbor in pages:
                 add_link(neighbor)
 
-    # De-dupe preserving order
     seen = set()
     deduped: List[Tuple[str, str]] = []
     for href, text in links:
@@ -235,20 +254,17 @@ def inject_into_html(
     lang: str,
     translated_slugs: Set[str],
 ) -> str:
-    # Idempotent cleanup
     html = remove_marked_block(html, CTA1_START, CTA1_END)
     html = remove_marked_block(html, CTA2_START, CTA2_END)
     html = remove_marked_block(html, RELATED_START, RELATED_END)
 
     slug = (draft.get("slug") or "").strip()
 
-    # CTA copy from draft JSON
     cta1_h = (draft.get("cta_primary_headline") or "").strip()
     cta1_t = (draft.get("cta_primary_text") or "").strip()
     cta2_h = (draft.get("cta_secondary_headline") or "").strip()
     cta2_t = (draft.get("cta_secondary_text") or "").strip()
 
-    # Partner href/label from pages.csv
     primary_partner_val = (page_row.get("primary_partner") or "").strip()
     secondary_partner_val = (page_row.get("secondary_partner") or "").strip()
 
@@ -269,7 +285,6 @@ def inject_into_html(
 
     related = build_related_links(slug, pages, pillar_slugs, lang=lang, translated_slugs=translated_slugs)
 
-    # Insert CTA1 right after first </h2>
     if cta1:
         if "</h2>" in html:
             before, after = html.split("</h2>", 1)
@@ -277,7 +292,6 @@ def inject_into_html(
         else:
             html = cta1 + "\n" + html
 
-    # Insert CTA2 + Related right before FAQ
     faq_marker = "<h2>FAQ</h2>"
     insert_tail = "\n".join([blk for blk in [cta2, related] if blk.strip()])
 
@@ -336,7 +350,6 @@ def main() -> None:
     print(f"Using pages: {pages_csv}")
     print(f"Processing drafts: {drafts_dir}")
 
-    # Precompute translated slugs for explicit lang runs; for multi-lang run we compute per draft lang.
     translated_slugs_for_explicit_lang: Set[str] = set()
     explicit_lang = None
     if args.lang:
@@ -350,7 +363,6 @@ def main() -> None:
         with draft_path.open(encoding="utf-8") as f:
             draft = json.load(f)
 
-        # Safety check: if draft says it's from another site, skip it.
         draft_site = (draft.get("site_key") or "").strip()
         if draft_site and draft_site != site.site_key:
             print(f"[WARN] Skip draft from different site ({draft_site}): {draft_path}")
@@ -359,7 +371,6 @@ def main() -> None:
         slug = (draft.get("slug") or draft_path.stem).strip()
         draft["slug"] = slug
 
-        # Determine language context for link building
         draft_lang = (draft.get("lang") or "").strip().lower()
         if not draft_lang:
             draft_lang = explicit_lang or infer_lang_from_path(draft_path, site.site_key)

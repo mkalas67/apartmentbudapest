@@ -1,10 +1,10 @@
 slug,title,area,intent,gen,primary_partner,secondary_partner,meta_description,primary_key_word
 apartments-in-istanbul,Apartments Istanbul,,pillar, ,booking,booking,"rental market, move to Turkey, flats, relocation",apartments for rent Istanbul
 where-to-live-in-istanbul,Where to live in Istanbul,,pillar, ,booking,booking,"neighborhood guide, expat areas, safety, local vibe",best districts Istanbul
-monthly-rentals-istanbul,Monthly rentals in Istanbul,,pillar, ,booking,booking,"mid-term housing, serviced apartments, no long contract",Istanbul monthly rentals
+monthly-rentals-istanbul,Monthly rentals in Istanbul,,pillar, ,monthly,booking,"mid-term housing, serviced apartments, no long contract",Istanbul monthly rentals
 istanbul-district-guide,Istanbul District Guide,,pillar, ,booking,booking,"guide to neighborhoods, property prices, transport",Istanbul district map
-student-apartments-istanbul,Student Apartments Istanbul,,pillar, ,booking,booking,"near universities, shared flats, budget-friendly, Erasmus",student accommodation Istanbul
-housing-for-expats-istanbul,Housing For Expats Istanbul,,pillar, ,booking,booking,"English speaking agents, relocation services, luxury rentals",expat housing Istanbul
-digital-nomad-apartments-istanbul,Digital Nomad Apartments Istanbul,,pillar, ,booking,booking,"fast wifi, coworking, flexible terms, central location",Istanbul digital nomad housing
+student-apartments-istanbul,Student Apartments Istanbul,,pillar, ,students,booking,"near universities, shared flats, budget-friendly, Erasmus",student accommodation Istanbul
+housing-for-expats-istanbul,Housing For Expats Istanbul,,pillar, ,expats,booking,"English speaking agents, relocation services, luxury rentals",expat housing Istanbul
+digital-nomad-apartments-istanbul,Digital Nomad Apartments Istanbul,,pillar, ,nomads,booking,"fast wifi, coworking, flexible terms, central location",Istanbul digital nomad housing
 ,,,, ,,,,
 ,,,, ,,,,

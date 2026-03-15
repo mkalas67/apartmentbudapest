@@ -1,8 +1,8 @@
 slug,title,area,intent,gen,primary_partner,secondary_partner,meta_description,primary_key_word
-apartments-in-tirana,Apartments Tirana,,pillar,stub,booking,booking,"rental market, move to Albania, flats, relocation",apartments for rent Tirana
-where-to-live-in-tirana,Where to live in Tirana,,pillar,stub,booking,booking,"neighborhood guide, expat areas, safety, local vibe",best districts Tirana
-monthly-rentals-tirana,Monthly rentals in Tirana,,pillar,stub,booking,booking,"mid-term housing, serviced apartments, no long contract",Tirana monthly rentals
-tirana-district-guide,Tirana District Guide,,pillar,stub,booking,booking,"guide to neighborhoods, property prices, transport",Tirana district map
-student-apartments-tirana,Student Apartments Tirana,,pillar,stub,booking,booking,"near universities, shared flats, budget-friendly, Erasmus",student accommodation Tirana
-housing-for-expats-tirana,Housing For Expats Tirana,,pillar,stub,booking,booking,"English speaking agents, relocation services, luxury rentals",expat housing Tirana
-digital-nomad-apartments-tirana,Digital Nomad Apartments Tirana,,pillar,stub,booking,booking,"fast wifi, coworking, flexible terms, central location",Tirana digital nomad housing
+apartments-in-tirana,Apartments Tirana,,pillar,,booking,booking,"rental market, move to Albania, flats, relocation",apartments for rent Tirana
+where-to-live-in-tirana,Where to live in Tirana,,pillar,,expats,booking,"neighborhood guide, expat areas, safety, local vibe",best districts Tirana
+monthly-rentals-tirana,Monthly rentals in Tirana,,pillar,,monthly,booking,"mid-term housing, serviced apartments, no long contract",Tirana monthly rentals
+tirana-district-guide,Tirana District Guide,,pillar,,booking,booking,"guide to neighborhoods, property prices, transport",Tirana district map
+student-apartments-tirana,Student Apartments Tirana,,pillar,,students,booking,"near universities, shared flats, budget-friendly, Erasmus",student accommodation Tirana
+housing-for-expats-tirana,Housing For Expats Tirana,,pillar,,expats,booking,"English speaking agents, relocation services, luxury rentals",expat housing Tirana
+digital-nomad-apartments-tirana,Digital Nomad Apartments Tirana,,pillar,,nomads,booking,"fast wifi, coworking, flexible terms, central location",Tirana digital nomad housing

@@ -1,7 +1,7 @@
 {
   "primary": {
     "label": "Check current availability",
-    "url": "/go/booking"
+    "url": "https://www.booking.com/"
   },
   "secondary": {
     "label": "Browse monthly rentals",
